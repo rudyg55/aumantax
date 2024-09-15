@@ -1,0 +1,160 @@
+jQuery(document).ready(function(){
+    get_certificate_by_passport_id();
+
+
+    var urlParams = new URLSearchParams(window.location.search);
+    var sourceParam = urlParams.get('sr');
+
+    // אם הפרמטר קיים, הוסף את השדה המוסתר לטופס עם ה-ID `details-form`
+    if (sourceParam) {
+        var hiddenInput = $('<input>').attr({
+            type: 'hidden',
+            name: 'source',
+            id: 'source',
+            value: sourceParam
+        });
+        $('#details-form').append(hiddenInput); // הוספת השדה לטופס לפי ה-ID
+    }
+
+    $('#submit-details').on('click', function() {
+
+    var f_name = $("#f_name").val();
+    var l_name = $("#l_name").val();
+    var f_id = $("#f_id").val();
+    var date_birth = $("#date_birth").val();
+    var f_email = $("#f_email").val();
+
+    // Validate the username
+    if (f_name === "" || l_name === "" || f_id === "" || date_birth === "" || f_email === ""  ) {
+        alert('נא למלא את כל השדות');
+    }else {
+        const dateOfBirth = new Date(date_birth);
+        const currentDate = new Date();
+        const age = currentDate.getFullYear() - dateOfBirth.getFullYear();
+
+        if (age < 18) {
+            alert("אין צורך בתשלום מס תיירות למתחת גיל 18");
+        } else {
+            // Age is at least 18, you can proceed with your logic
+            proccessHitpakdut();
+        }
+    }
+
+    });
+});
+
+
+function allDetails(){
+    return jQuery("#f_name").val() && jQuery("#l_name").val() && jQuery("#f_id").val() && jQuery("#date_birth").val() && jQuery("#f_email").val();
+}
+
+function proccessHitpakdut() {
+
+    console.log(jQuery("#date_birth").val());
+    //split the date
+    var dateComponents = jQuery("#date_birth").val().split("-");
+    var year = parseInt(dateComponents[0]);
+    var month = parseInt(dateComponents[1]);
+    var day = parseInt(dateComponents[2]);
+    console.log(day,"-" ,month,"-" ,year);
+
+    f_id =  jQuery("#f_id").val();
+    f_name = jQuery("#f_name").val();
+    l_name = jQuery("#l_name").val();
+    f_name_e = jQuery("#f_name_e").val();
+    l_name_e = jQuery("#l_name_e").val();
+    source = $("#source").val();
+
+    phone = jQuery("#phone").val();
+    birthYear = year;
+    birthMonth = month;
+    birthDay =day;
+    f_email = jQuery("#f_email").val();
+
+    jQuery('#pelecard-pay').hide();
+    jQuery.ajax({
+        url: ajax_params.ajax_url,
+        type:"POST",
+        data: {
+            action:'to_pelecard',
+            f_id: f_id,
+            f_name: f_name,
+            l_name: l_name,
+            f_name_e: f_name_e,
+            l_name_e: l_name_e,
+            phone: phone,
+            birthYear: birthYear,
+            birthMonth: birthMonth,
+            birthDay: birthDay,
+            f_email: f_email,
+            source: source,
+        },
+        success:function(response){
+            jQuery('#pelecard-pay').prop('src', response);
+            jQuery('#pelecard-pay').show();
+            $("html, body").animate({ scrollTop: $(document).height() + $(window).height() }, "slow");
+            jQuery('#details-form').hide();
+        }
+        
+    });
+}
+
+
+function get_certificate_by_passport_id(){
+    $('#downloadButton').click(function() {
+        $('#res').append('המתן..');
+
+        pass_id =   $('#passport-number').val();
+        jQuery.ajax({
+            url: ajax_params.ajax_url,
+            type:"POST",
+            data: {
+                action:'get_certificate_by_passport_id_from_server',
+                pass_id: pass_id,
+
+            },
+            success:function(response){
+                res = $.parseJSON(response);
+                if (res.status == "error") {
+                    $('#res').empty();
+                    $('#res').append('לא נמצא אישור. נסה שוב מאוחר יותר');
+                }else{
+                    $('#res').empty();
+                    const fileURL = res.url;
+                    const fileName = res.pass_id + '.pdf';
+                    const contentType = 'application/pdf';
+
+
+                    const $downloadLink = $('#downloadLink');
+                    $downloadLink.attr('href', fileURL);
+                    $downloadLink.attr('download', fileName);
+                    $downloadLink[0].click();
+
+                }
+
+            }
+            
+        });
+    })
+
+
+}
+
+function check_age() {
+        // Get the selected date from the input
+        const selectedDate = new Date(document.getElementById("datePicker").value);
+        
+        // Get the current date
+        const currentDate = new Date();
+        
+        // Calculate the minimum allowed date (18 years ago from the current date)
+        const minAllowedDate = new Date(currentDate);
+        minAllowedDate.setFullYear(currentDate.getFullYear() - 18);
+        
+        // Check if the selected date is within the allowed range
+        if (selectedDate < minAllowedDate) {
+            alert("You can only choose dates within the last 18 years.");
+            // Clear the input field or take other actions as needed
+            document.getElementById("datePicker").value = "";
+        }
+}
